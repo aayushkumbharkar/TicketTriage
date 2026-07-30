@@ -2,13 +2,14 @@
 
 **AI Support Ticket Classifier & Response Assistant**
 
-> Built as a technical assessment for Chartered Vectorial. Not a tutorial project — production patterns throughout.
+[![CI Pipeline](https://github.com/aayushkumbharkar/TicketTriage/actions/workflows/ci.yml/badge.svg)](https://github.com/aayushkumbharkar/TicketTriage/actions)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-TicketTriage-blue?logo=github)](https://github.com/aayushkumbharkar/TicketTriage)
 
 ---
 
 ## Architecture Overview
 
-TicketTriage is a full-stack AI application with a clear three-layer architecture. The **React frontend** (Vite + Tailwind CSS) provides a premium dark-mode interface for submitting tickets, browsing the ticket list with filters, and viewing real-time analytics. It communicates exclusively with the **FastAPI backend** over a REST API, with CORS configured for the Vite development server. The backend is responsible for all business logic: it receives ticket submissions, calls **Google Gemini Flash** (`gemini-1.5-flash`) via the `google-genai` SDK with a carefully engineered system prompt, parses the structured JSON response (enforced by `response_mime_type="application/json"`), and persists the full classification result to **SQLite** via an async SQLAlchemy ORM. The database file is self-contained and mounts as a Docker volume in production, requiring zero external infrastructure.
+TicketTriage is a full-stack AI application with a clear three-layer architecture. The **React frontend** (Vite + Tailwind CSS) provides a premium dark-mode interface for submitting tickets, browsing the ticket list with filters, and viewing real-time analytics. It communicates exclusively with the **FastAPI backend** over a REST API, with CORS configured for the Vite development server. The backend is responsible for all business logic: it receives ticket submissions, calls **Google Gemini Flash** (`gemini-2.0-flash`) via the `google-genai` SDK with a carefully engineered system prompt, parses the structured JSON response (enforced by `response_mime_type="application/json"`), and persists the full classification result to **SQLite** via an async SQLAlchemy ORM. The database file is self-contained and mounts as a Docker volume in production, requiring zero external infrastructure.
 
 ```
 ┌─────────────────────────────────┐
@@ -19,7 +20,7 @@ TicketTriage is a full-stack AI application with a clear three-layer architectur
              │ REST (axios)
              ▼
 ┌─────────────────────────────────┐
-│  FastAPI (Python 3.11)          │  http://localhost:8000
+│  FastAPI (Python 3.10+)         │  http://localhost:8000
 │  POST /tickets                  │
 │  GET  /tickets                  │
 │  GET  /tickets/{id}             │
@@ -31,7 +32,7 @@ TicketTriage is a full-stack AI application with a clear three-layer architectur
          ▼
 ┌─────────────────────────────────┐    ┌──────────────────┐
 │  Google Gemini Flash            │    │  SQLite (async)  │
-│  gemini-1.5-flash               │    │  SQLAlchemy ORM  │
+│  gemini-2.0-flash               │    │  SQLAlchemy ORM  │
 │  response_mime_type=json        │    │  aiosqlite       │
 └─────────────────────────────────┘    └──────────────────┘
 ```
