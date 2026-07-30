@@ -1,23 +1,29 @@
-// ── Shared Badge Helper Functions ──────────────────────────────────────────
-
-export function confidenceBadgeClass(confidence) {
-  if (confidence >= 0.8) return 'badge conf-high'
-  if (confidence >= 0.5) return 'badge conf-medium'
-  return 'badge conf-low'
-}
+// ── Shared Badge Helper Functions matching Design System Specification ──────
 
 export function priorityBadgeClass(priority) {
-  if (priority === 'High')   return 'badge badge-high'
-  if (priority === 'Medium') return 'badge badge-medium'
-  return 'badge badge-low'
+  if (priority === 'High')   return 'badge-priority badge-priority-high'
+  if (priority === 'Medium') return 'badge-priority badge-priority-medium'
+  return 'badge-priority badge-priority-low'
 }
 
 export function categoryBadgeClass(category) {
   const map = {
-    Billing: 'badge-billing',
-    Bug: 'badge-bug',
-    'Feature Request': 'badge-feature',
-    General: 'badge-general'
+    Bug: 'badge-category badge-category-bug',
+    Billing: 'badge-category badge-category-billing',
+    'Feature Request': 'badge-category badge-category-feature',
+    General: 'badge-category badge-category-general'
   }
-  return `badge ${map[category] || 'badge-general'}`
+  return map[category] || 'badge-category badge-category-general'
+}
+
+export function confidenceBadgeClass(confidence) {
+  if (confidence >= 0.8) return 'badge-confidence badge-confidence-high'
+  if (confidence >= 0.5) return 'badge-confidence badge-confidence-medium'
+  return 'badge-confidence badge-confidence-low'
+}
+
+export function statusBadgeClass(status) {
+  if (status === 'Resolved') return 'badge-status badge-status-resolved'
+  if (status === 'In Progress') return 'badge-status badge-status-inprogress'
+  return 'badge-status badge-status-open'
 }
