@@ -41,7 +41,7 @@ PROMPT_VERSION = "v1.0"
 # The ValueError from genai.Client is caught at call-time and returns the
 # safe fallback, keeping the application functional even without a key.
 # ---------------------------------------------------------------------------
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-1.5-flash"
 _client: genai.Client | None = None
 
 
@@ -178,8 +178,10 @@ async def classify_ticket(
 
     except Exception as exc:
         logger.error(
-            "Gemini API call failed — prompt_version=%s error=%s",
+            "Gemini API call failed — model=%s prompt_version=%s error_type=%s error=%s",
+            MODEL,
             PROMPT_VERSION,
+            type(exc).__name__,
             exc,
             exc_info=True,
         )
