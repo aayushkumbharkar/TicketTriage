@@ -7,7 +7,7 @@ import {
   statusBadgeClass
 } from '../utils/badgeHelpers'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export default function TicketDetail({ ticket, onUpdate }) {
   const [reply, setReply]            = useState(ticket.suggested_reply || ticket.final_reply || '')

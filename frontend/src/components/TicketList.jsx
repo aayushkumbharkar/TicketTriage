@@ -8,7 +8,7 @@ import {
   statusBadgeClass
 } from '../utils/badgeHelpers'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const CATEGORIES = ['All', 'Billing', 'Bug', 'Feature Request', 'General']
 const PRIORITIES  = ['All', 'High', 'Medium', 'Low']

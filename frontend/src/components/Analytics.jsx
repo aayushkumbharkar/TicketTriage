@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import { priorityBadgeClass } from '../utils/badgeHelpers'
 
-const API = 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const PRIORITY_COLORS = {
   High:   '#E24B4A',

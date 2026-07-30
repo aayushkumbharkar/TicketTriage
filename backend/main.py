@@ -15,6 +15,7 @@ Error strategy:
 
 import logging
 import logging.config
+import os
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -82,9 +83,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Build CORS origins list: always include localhost dev URLs, plus any
+# production origins supplied via the ALLOWED_ORIGINS environment variable
+# (comma-separated, e.g. "https://tickettriage.vercel.app,https://www.tickettriage.com")
+_extra_origins = [
+    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+_origins = ["http://localhost:5173", "http://127.0.0.1:5173"] + _extra_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
