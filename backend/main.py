@@ -225,6 +225,30 @@ async def update_ticket(
 
 
 # ---------------------------------------------------------------------------
+# DELETE /tickets/{id} — permanently delete a ticket
+# ---------------------------------------------------------------------------
+@app.delete("/tickets/{ticket_id}", status_code=204)
+async def delete_ticket(
+    ticket_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Permanently delete a ticket by its UUID."""
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None:
+        raise HTTPException(status_code=404, detail=f"Ticket {ticket_id!r} not found.")
+
+    try:
+        await db.delete(ticket)
+        await db.commit()
+    except Exception as exc:
+        logger.error("Database delete failed for ticket %s: %s", ticket_id, exc, exc_info=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to delete ticket.")
+
+    logger.info("Ticket deleted — id=%s", ticket_id)
+
+
+# ---------------------------------------------------------------------------
 # POST /tickets/{id}/regenerate — regenerate suggested reply
 # ---------------------------------------------------------------------------
 @app.post("/tickets/{ticket_id}/regenerate", response_model=RegenerateResponse)
@@ -340,4 +364,9 @@ async def get_analytics(db: AsyncSession = Depends(get_db)) -> AnalyticsResponse
 # ---------------------------------------------------------------------------
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "version": "1.0.0"}
+    gemini_configured = bool(os.environ.get("GEMINI_API_KEY"))
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "gemini_configured": gemini_configured,
+    }

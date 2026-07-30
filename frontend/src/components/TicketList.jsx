@@ -29,7 +29,8 @@ export default function TicketList() {
   const [loading, setLoading]       = useState(true)
   const [error, setError]           = useState(null)
   const [expandedId, setExpandedId] = useState(null)
-  
+  const [deletingId, setDeletingId] = useState(null)
+
   // Filters state
   const [category, setCategory]     = useState('All')
   const [priority, setPriority]     = useState('All')
@@ -56,6 +57,21 @@ export default function TicketList() {
 
   const handleTicketUpdate = (updated) => {
     setTickets(prev => prev.map(t => t.id === updated.id ? updated : t))
+  }
+
+  const handleDelete = async (e, ticketId) => {
+    e.stopPropagation()
+    if (!window.confirm('Delete this ticket permanently? This cannot be undone.')) return
+    setDeletingId(ticketId)
+    try {
+      await axios.delete(`${API}/tickets/${ticketId}`)
+      setTickets(prev => prev.filter(t => t.id !== ticketId))
+      if (expandedId === ticketId) setExpandedId(null)
+    } catch {
+      alert('Failed to delete ticket. Please try again.')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   // Client-side filtering for status and search query
@@ -172,6 +188,7 @@ export default function TicketList() {
                   <th>Confidence</th>
                   <th>Status</th>
                   <th>Created At</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,10 +200,10 @@ export default function TicketList() {
                         {/* Main row */}
                         <div
                           onClick={() => setExpandedId(isExpanded ? null : t.id)}
-                          className="table-row-interactive flex items-center justify-between px-4 py-2.5 hover:bg-[#1c1f30] transition-colors"
+                          className="table-row-interactive flex items-center justify-between px-4 py-2.5 hover:bg-[#1c1f30] transition-colors cursor-pointer"
                         >
                           {/* Subject column */}
-                          <div className="w-[30%] min-w-[200px] pr-2">
+                          <div className="w-[28%] min-w-[180px] pr-2">
                             <div className="text-[#E8E9F0] text-[13px] font-medium truncate">
                               {t.subject}
                             </div>
@@ -205,29 +222,50 @@ export default function TicketList() {
                           </div>
 
                           {/* Priority */}
-                          <div className="w-[13%]">
+                          <div className="w-[12%]">
                             <span className={priorityBadgeClass(t.priority)}>
                               {t.priority}
                             </span>
                           </div>
 
                           {/* Confidence */}
-                          <div className="w-[12%]">
+                          <div className="w-[11%]">
                             <span className={confidenceBadgeClass(t.confidence)}>
                               {(t.confidence * 100).toFixed(0)}%
                             </span>
                           </div>
 
                           {/* Status */}
-                          <div className="w-[15%]">
+                          <div className="w-[13%]">
                             <span className={statusBadgeClass(t.status)}>
                               {t.status}
                             </span>
                           </div>
 
                           {/* Created At */}
-                          <div className="w-[15%] text-right font-mono-data text-[12px] text-[#7B7F96]">
+                          <div className="w-[13%] font-mono-data text-[12px] text-[#7B7F96]">
                             {formatDate(t.created_at)}
+                          </div>
+
+                          {/* Delete Action */}
+                          <div className="w-[8%] flex justify-end">
+                            <button
+                              onClick={(e) => handleDelete(e, t.id)}
+                              disabled={deletingId === t.id}
+                              title="Delete ticket"
+                              className="p-1.5 rounded-md text-[#7B7F96] hover:text-[#E24B4A] hover:bg-[rgba(226,75,74,0.12)] transition-colors disabled:opacity-40"
+                            >
+                              {deletingId === t.id ? (
+                                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                </svg>
+                              ) : (
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              )}
+                            </button>
                           </div>
                         </div>
 
