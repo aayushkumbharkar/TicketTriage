@@ -10,6 +10,8 @@ jobs:
   backend-tests:
     name: Backend Tests & Linting
     runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'ci_dummy_key_12345' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -26,8 +28,6 @@ jobs:
           pip install httpx
 
       - name: Run Backend Unit Tests
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python -m unittest backend.test_main
 

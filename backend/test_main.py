@@ -1,22 +1,57 @@
 """
-test_main.py — Comprehensive automated test suite for TicketTriage FastAPI backend.
+test_main.py — Automated unit & API integration test suite for TicketTriage FastAPI backend.
 
-Tests all key promises:
+Features tested:
 1. System Health Check (/health)
-2. Ticket Creation with AI Triage Classification (/tickets POST)
+2. Ticket Creation with Mocked AI Triage Classification (/tickets POST)
 3. Ticket Retrieval & Filtering (/tickets GET)
 4. Single Ticket Lookup (/tickets/{id} GET) & 404 handling
 5. Ticket Update / Reply Editing (/tickets/{id} PATCH)
-6. Analytics & Metrics Aggregation (/analytics GET)
+6. Suggested Reply Regeneration (/tickets/{id}/regenerate POST)
+7. Analytics & Metrics Aggregation (/analytics GET)
 """
 
+import asyncio
+import os
 import unittest
+from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
+
+# Set dummy key for CI environment before imports
+os.environ.setdefault("GEMINI_API_KEY", "ci_dummy_key_12345")
+
+from backend.database import init_db
 from backend.main import app
+from backend.schemas import LLMClassification
 
 client = TestClient(app)
 
 class TestTicketTriageAPI(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """Ensure SQLite tables are initialized before running tests."""
+        asyncio.run(init_db())
+
+    def setUp(self):
+        """Mock LLM classification and regeneration so tests are fast, deterministic, and API key independent."""
+        # 1. Patch classify_ticket
+        self.classify_patcher = patch("backend.main.classify_ticket", new_callable=AsyncMock)
+        self.mock_classify = self.classify_patcher.start()
+        self.mock_classify.return_value = LLMClassification(
+            category="General",
+            priority="Medium",
+            confidence=0.90,
+            reasoning="Mocked classification for automated CI testing.",
+            suggested_reply="Thank you for reaching out. We have received your ticket and are investigating."
+        )
+        self.addCleanup(self.classify_patcher.stop)
+
+        # 2. Patch regenerate_reply
+        self.regen_patcher = patch("backend.main.regenerate_reply", new_callable=AsyncMock)
+        self.mock_regen = self.regen_patcher.start()
+        self.mock_regen.return_value = "This is a regenerated suggested reply for testing."
+        self.addCleanup(self.regen_patcher.stop)
 
     def test_01_health_check(self):
         """Verify API health endpoint returns 200 OK and status ok."""
@@ -39,10 +74,9 @@ class TestTicketTriageAPI(unittest.TestCase):
         self.assertIn("id", data)
         self.assertEqual(data["subject"], payload["subject"])
         self.assertEqual(data["submitter_email"], payload["submitter_email"])
-        self.assertIn(data["category"], ["Bug Report", "Feature Request", "Billing Issue", "General"])
-        self.assertIn(data["priority"], ["Critical", "High", "Medium", "Low"])
-        self.assertIsInstance(data["confidence"], float)
-        self.assertIsInstance(data["suggested_reply"], str)
+        self.assertEqual(data["category"], "General")
+        self.assertEqual(data["priority"], "Medium")
+        self.assertEqual(data["confidence"], 0.90)
         self.assertEqual(data["status"], "Open")
 
     def test_03_list_tickets(self):
@@ -91,7 +125,19 @@ class TestTicketTriageAPI(unittest.TestCase):
         self.assertEqual(updated["final_reply"], update_payload["final_reply"])
         self.assertTrue(updated["is_edited"])
 
-    def test_06_analytics_dashboard(self):
+    def test_06_regenerate_ticket_reply(self):
+        """Verify regenerating a suggested reply for an existing ticket."""
+        list_res = client.get("/tickets")
+        tickets = list_res.json()
+        target_id = tickets[0]["id"]
+
+        response = client.post(f"/tickets/{target_id}/regenerate")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("suggested_reply", data)
+        self.assertEqual(data["suggested_reply"], "This is a regenerated suggested reply for testing.")
+
+    def test_07_analytics_dashboard(self):
         """Verify aggregate analytics metrics calculation."""
         response = client.get("/analytics")
         self.assertEqual(response.status_code, 200)
