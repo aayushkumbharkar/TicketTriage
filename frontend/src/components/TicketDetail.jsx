@@ -1,36 +1,49 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import axios from 'axios'
 import {
   confidenceBadgeClass,
   priorityBadgeClass,
   categoryBadgeClass,
-  statusBadgeClass
 } from '../utils/badgeHelpers'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const STATUSES = ['Open', 'In Progress', 'Resolved']
 
 export default function TicketDetail({ ticket, onUpdate }) {
-  const [reply, setReply]            = useState(ticket.suggested_reply || ticket.final_reply || '')
-  const [status, setStatus]          = useState(ticket.status || 'Open')
-  const [isDirty, setIsDirty]        = useState(false)
-  const [isSaving, setIsSaving]      = useState(false)
-  const [isStatusSaving, setStatusSaving] = useState(false)
-  const [isRegenerating, setIsRegen] = useState(false)
-  const [copied, setCopied]          = useState(false)
-  const [regenError, setRegenError]  = useState(null)
-  const [saveError, setSaveError]    = useState(null)
+  const [reply, setReply]                   = useState(ticket.final_reply || ticket.suggested_reply || '')
+  const [status, setStatus]                 = useState(ticket.status || 'Open')
+  const [isDirty, setIsDirty]               = useState(false)
+  const [isSaving, setIsSaving]             = useState(false)
+  const [isStatusSaving, setStatusSaving]   = useState(false)
+  const [isRegenerating, setIsRegen]        = useState(false)
+  const [copied, setCopied]                 = useState(false)
+  const [regenError, setRegenError]         = useState(null)
+  const [saveError, setSaveError]           = useState(null)
+
+  // Sync reply when ticket prop updates from outside (regenerate / parent refresh)
+  // Only sync if user hasn't started editing locally
+  useEffect(() => {
+    if (!isDirty) {
+      setReply(ticket.final_reply || ticket.suggested_reply || '')
+    }
+  }, [ticket.final_reply, ticket.suggested_reply, isDirty])
+
+  // Always sync status from parent
+  useEffect(() => {
+    setStatus(ticket.status || 'Open')
+  }, [ticket.status])
 
   const handleStatusChange = async (newStatus) => {
     setStatus(newStatus)
     setStatusSaving(true)
+    setSaveError(null)
     try {
       const { data } = await axios.patch(`${API}/tickets/${ticket.id}`, {
         status: newStatus,
       })
       onUpdate?.(data)
     } catch {
-      setSaveError('Failed to update status.')
+      setSaveError('Failed to update status. Please try again.')
       setStatus(ticket.status) // revert on error
     } finally {
       setStatusSaving(false)
@@ -58,13 +71,16 @@ export default function TicketDetail({ ticket, onUpdate }) {
   const handleRegenerate = async () => {
     setIsRegen(true)
     setRegenError(null)
+    setIsDirty(false)
     try {
       const { data } = await axios.post(`${API}/tickets/${ticket.id}/regenerate`)
       setReply(data.suggested_reply)
-      onUpdate?.({ ...ticket, suggested_reply: data.suggested_reply })
-      setIsDirty(false)
+      onUpdate?.({ ...ticket, suggested_reply: data.suggested_reply, final_reply: null })
     } catch (err) {
-      setRegenError(err.response?.data?.detail || 'Regeneration failed. Check that the backend is running with a valid GEMINI_API_KEY.')
+      setRegenError(
+        err.response?.data?.detail ||
+        'Regeneration failed — ensure GEMINI_API_KEY is set on the backend.'
+      )
     } finally {
       setIsRegen(false)
     }
