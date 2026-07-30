@@ -48,7 +48,7 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ── Custom pie label ─────────────────────────────────────────────────────────
-function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) {
+function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }) {
   if (percent < 0.06) return null
   const RADIAN = Math.PI / 180
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5

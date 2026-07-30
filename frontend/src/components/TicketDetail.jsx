@@ -3,25 +3,7 @@ import axios from 'axios'
 
 const API = 'http://localhost:8000'
 
-// ── Helper: confidence badge class ──────────────────────────────────────────
-export function confidenceBadgeClass(confidence) {
-  if (confidence >= 0.8) return 'badge conf-high'
-  if (confidence >= 0.5) return 'badge conf-medium'
-  return 'badge conf-low'
-}
-
-// ── Helper: priority badge class ─────────────────────────────────────────────
-export function priorityBadgeClass(priority) {
-  if (priority === 'High')   return 'badge badge-high'
-  if (priority === 'Medium') return 'badge badge-medium'
-  return 'badge badge-low'
-}
-
-// ── Helper: category badge class ─────────────────────────────────────────────
-export function categoryBadgeClass(category) {
-  const map = { Billing: 'badge-billing', Bug: 'badge-bug', 'Feature Request': 'badge-feature', General: 'badge-general' }
-  return `badge ${map[category] || 'badge-general'}`
-}
+import { confidenceBadgeClass, priorityBadgeClass, categoryBadgeClass } from '../utils/badgeHelpers'
 
 export default function TicketDetail({ ticket, onUpdate }) {
   const [reply, setReply]             = useState(ticket.suggested_reply || '')

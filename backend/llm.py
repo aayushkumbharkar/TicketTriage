@@ -41,7 +41,7 @@ PROMPT_VERSION = "v1.0"
 # The ValueError from genai.Client is caught at call-time and returns the
 # safe fallback, keeping the application functional even without a key.
 # ---------------------------------------------------------------------------
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-2.0-flash"
 _client: genai.Client | None = None
 
 

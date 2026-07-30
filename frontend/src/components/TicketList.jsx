@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
-import TicketDetail, { priorityBadgeClass, categoryBadgeClass, confidenceBadgeClass } from './TicketDetail'
+import TicketDetail from './TicketDetail'
+import { priorityBadgeClass, categoryBadgeClass, confidenceBadgeClass } from '../utils/badgeHelpers'
 
 const API = 'http://localhost:8000'
 
