@@ -1,19 +1,22 @@
 import { useState, useCallback } from 'react'
 import axios from 'axios'
+import {
+  confidenceBadgeClass,
+  priorityBadgeClass,
+  categoryBadgeClass,
+  statusBadgeClass
+} from '../utils/badgeHelpers'
 
 const API = 'http://localhost:8000'
 
-import { confidenceBadgeClass, priorityBadgeClass, categoryBadgeClass } from '../utils/badgeHelpers'
-
 export default function TicketDetail({ ticket, onUpdate }) {
-  const [reply, setReply]             = useState(ticket.suggested_reply || '')
-  const [isDirty, setIsDirty]         = useState(false)
-  const [isSaving, setIsSaving]       = useState(false)
-  const [isRegenerating, setIsRegen]  = useState(false)
-  const [copied, setCopied]           = useState(false)
-  const [regenError, setRegenError]   = useState(null)
+  const [reply, setReply]            = useState(ticket.suggested_reply || ticket.final_reply || '')
+  const [isDirty, setIsDirty]        = useState(false)
+  const [isSaving, setIsSaving]      = useState(false)
+  const [isRegenerating, setIsRegen] = useState(false)
+  const [copied, setCopied]          = useState(false)
+  const [regenError, setRegenError]  = useState(null)
 
-  // ── Save edited reply ──────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!isDirty) return
     setIsSaving(true)
@@ -25,19 +28,19 @@ export default function TicketDetail({ ticket, onUpdate }) {
       onUpdate?.(data)
       setIsDirty(false)
     } catch {
-      // silent — save is best-effort
+      // Best-effort
     } finally {
       setIsSaving(false)
     }
   }, [isDirty, reply, ticket.id, onUpdate])
 
-  // ── Regenerate reply ───────────────────────────────────────────────────────
   const handleRegenerate = async () => {
     setIsRegen(true)
     setRegenError(null)
     try {
       const { data } = await axios.post(`${API}/tickets/${ticket.id}/regenerate`)
       setReply(data.suggested_reply)
+      onUpdate?.({ ...ticket, suggested_reply: data.suggested_reply })
       setIsDirty(false)
     } catch (err) {
       setRegenError(err.response?.data?.detail || 'Regeneration failed.')
@@ -46,7 +49,6 @@ export default function TicketDetail({ ticket, onUpdate }) {
     }
   }
 
-  // ── Copy to clipboard ──────────────────────────────────────────────────────
   const handleCopy = async () => {
     await navigator.clipboard.writeText(reply)
     setCopied(true)
@@ -56,100 +58,91 @@ export default function TicketDetail({ ticket, onUpdate }) {
   const t = ticket
 
   return (
-    <div className="rounded-2xl p-6 glass animate-fade-in" style={{ border: '1px solid var(--border)' }}>
-      {/* Classification row */}
-      <div className="flex flex-wrap items-center gap-3 mb-5 pb-5" style={{ borderBottom: '1px solid var(--border)' }}>
-        <span className={categoryBadgeClass(t.category)}>{t.category}</span>
-        <span className={priorityBadgeClass(t.priority)}>{t.priority} Priority</span>
-        <span className={confidenceBadgeClass(t.confidence)}>
-          {Math.round(t.confidence * 100)}% confidence
+    <div className="bg-[#0F1117] border border-[#1e2235] rounded-[8px] p-4 text-[13px] my-2 space-y-3">
+      {/* Header bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1e2235] pb-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={categoryBadgeClass(t.category)}>{t.category}</span>
+          <span className={priorityBadgeClass(t.priority)}>{t.priority}</span>
+          <span className={confidenceBadgeClass(t.confidence)}>
+            {(t.confidence * 100).toFixed(0)}% confidence
+          </span>
+          <span className={statusBadgeClass(t.status)}>{t.status}</span>
+        </div>
+
+        <span className="font-mono-data text-[10px] text-[#6C63FF] bg-[rgba(108,99,255,0.1)] border border-[rgba(108,99,255,0.2)] px-2 py-0.5 rounded-[4px]">
+          {t.prompt_version || 'v1.0'}
         </span>
-        <span className="ml-auto text-xs px-2 py-1 rounded" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
-          {t.prompt_version}
-        </span>
+      </div>
+
+      {/* Description */}
+      <div>
+        <span className="text-[10px] text-[#7B7F96] uppercase tracking-wider block mb-1">Full Description</span>
+        <p className="text-[#c8cad8] bg-[#13151f] p-3 rounded-[6px] border border-[#1e2235] text-[12px] whitespace-pre-wrap">
+          {t.description}
+        </p>
       </div>
 
       {/* Reasoning */}
-      <div className="mb-5">
-        <p className="text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>AI Reasoning</p>
-        <p className="text-sm" style={{ color: '#cbd5e1', lineHeight: 1.6 }}>{t.reasoning}</p>
-      </div>
-
-      {/* Subject & description (compact) */}
-      <div className="grid grid-cols-1 gap-3 mb-5 text-sm">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Subject</span>
-          <p className="mt-0.5 text-white font-medium">{t.subject}</p>
+      <div>
+        <span className="text-[10px] text-[#7B7F96] uppercase tracking-wider block mb-1">AI Reasoning</span>
+        <div className="bg-[#13151f] border-l-2 border-l-[#6C63FF] p-3 rounded-r-[6px] text-[12px] text-[#c8cad8]">
+          {t.reasoning}
         </div>
-        {t.submitter_email && (
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Submitted by</span>
-            <p className="mt-0.5" style={{ color: '#94a3b8' }}>{t.submitter_email}</p>
-          </div>
-        )}
       </div>
 
-      {/* Suggested reply — editable */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-            Suggested Reply {t.is_edited && <span className="ml-2 normal-case text-yellow-400">· edited by human</span>}
-          </p>
-          {isDirty && (
-            <span className="text-xs" style={{ color: '#fbbf24' }}>Unsaved changes</span>
-          )}
+      {/* Reply textarea */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] text-[#7B7F96] uppercase tracking-wider">Suggested Reply</span>
+          {t.is_edited && <span className="font-mono-data text-[10px] text-[#FAC775]">Edited by agent</span>}
         </div>
         <textarea
-          id={`reply-${t.id}`}
+          rows={4}
           value={reply}
           onChange={e => { setReply(e.target.value); setIsDirty(true) }}
           onBlur={handleSave}
-          rows={6}
-          className="input-field px-4 py-3 resize-none text-sm"
-          style={{ lineHeight: 1.65 }}
-          placeholder="AI-generated reply will appear here…"
+          className="tt-input text-[12px] resize-none"
         />
       </div>
 
-      {/* Action buttons */}
-      <div className="flex flex-wrap gap-2 mt-2">
+      {/* Action buttons (Ghost style) */}
+      <div className="flex items-center justify-end gap-2 pt-1">
         <button
-          id={`btn-save-${t.id}`}
-          onClick={handleSave}
-          disabled={!isDirty || isSaving}
-          className="btn-primary text-sm px-4 py-2"
-        >
-          {isSaving ? 'Saving…' : 'Save Edit'}
-        </button>
-
-        <button
-          id={`btn-regen-${t.id}`}
+          type="button"
           onClick={handleRegenerate}
           disabled={isRegenerating}
-          className="btn-secondary text-sm px-4 py-2"
+          className="btn-ghost text-[12px]"
         >
-          {isRegenerating ? (
-            <span className="flex items-center gap-1.5">
-              <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-              </svg>
-              Regenerating…
-            </span>
-          ) : '↺ Regenerate Reply'}
+          <svg className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>{isRegenerating ? 'Regenerating...' : 'Regenerate'}</span>
         </button>
 
         <button
-          id={`btn-copy-${t.id}`}
+          type="button"
           onClick={handleCopy}
-          className="btn-secondary text-sm px-4 py-2"
+          className="btn-ghost text-[12px]"
         >
-          {copied ? '✓ Copied!' : '⧉ Copy'}
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          <span>{copied ? 'Copied!' : 'Copy'}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!isDirty || isSaving}
+          className="btn-ghost text-[12px] text-[#6C63FF] border-[#6C63FF]/30 hover:border-[#6C63FF]"
+        >
+          <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
         </button>
       </div>
 
       {regenError && (
-        <p className="mt-3 text-xs" style={{ color: '#f87171' }}>⚠ {regenError}</p>
+        <p className="text-[11px] text-[#f09595]">⚠ {regenError}</p>
       )}
     </div>
   )
