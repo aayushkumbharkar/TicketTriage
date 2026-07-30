@@ -7,9 +7,11 @@
 
 ---
 
-## Architecture Overview
+## 🏛️ Architecture Overview
 
-TicketTriage is a full-stack AI application with a clear three-layer architecture. The **React frontend** (Vite + Tailwind CSS) provides a premium dark-mode interface for submitting tickets, browsing the ticket list with filters, and viewing real-time analytics. It communicates exclusively with the **FastAPI backend** over a REST API, with CORS configured for the Vite development server. The backend is responsible for all business logic: it receives ticket submissions, calls **Google Gemini Flash** (`gemini-2.0-flash`) via the `google-genai` SDK with a carefully engineered system prompt, parses the structured JSON response (enforced by `response_mime_type="application/json"`), and persists the full classification result to **SQLite** via an async SQLAlchemy ORM. The database file is self-contained and mounts as a Docker volume in production, requiring zero external infrastructure.
+TicketTriage is a full-stack AI application engineered with production-grade architectural patterns. The **React frontend** (Vite + Tailwind CSS with custom design system tokens) provides a dark-mode interface for submitting tickets, reviewing AI classification rationale, inline reply editing, and monitoring real-time analytics. It communicates with the **FastAPI backend** over RESTful APIs.
+
+The backend calls **Google Gemini 2.0 Flash** (`gemini-2.0-flash`) via the official `google-genai` SDK using a single-pass JSON-structured system prompt (`response_mime_type="application/json"`). Results are persisted to **SQLite** via an async SQLAlchemy ORM engine (`aiosqlite`).
 
 ```
 ┌─────────────────────────────────┐
@@ -39,172 +41,144 @@ TicketTriage is a full-stack AI application with a clear three-layer architectur
 
 ---
 
-## Setup
+## ⚡ Quick Setup & Running Locally
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.10+
 - Node.js 18+
-- A Google Gemini API key (free at [aistudio.google.com](https://aistudio.google.com/app/apikey))
+- Google Gemini API key (Free at [aistudio.google.com](https://aistudio.google.com/app/apikey))
 
 ### 1. Clone the repository
-
 ```bash
-git clone https://github.com/your-username/tickettriage.git
-cd tickettriage
+git clone https://github.com/aayushkumbharkar/TicketTriage.git
+cd TicketTriage
 ```
 
-### 2. Backend setup
-
+### 2. Backend Setup
 ```bash
 cd backend
-
-# Create and activate a virtual environment
 python -m venv venv
+
 # Windows
 venv\Scripts\activate
 # macOS/Linux
 source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
 cp .env.example .env
 # Edit .env and set your GEMINI_API_KEY
 ```
 
-### 3. Run the backend
-
+### 3. Run Backend Server
 ```bash
-# From the project root (tickettriage/), not inside backend/
-uvicorn backend.main:app --reload --port 8000
+# From project root (TicketTriage/)
+python -m uvicorn backend.main:app --reload --port 8000
 ```
+- API: `http://127.0.0.1:8000`
+- Interactive Swagger API Docs: `http://127.0.0.1:8000/docs`
 
-The API will be available at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
-
-### 4. Frontend setup
-
+### 4. Frontend Setup & Launch
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+- Web Application UI: `http://127.0.0.1:5173`
 
-The frontend will be available at `http://localhost:5173`.
-
-### 5. Docker (optional — backend only)
-
+### 5. Automated Tests Execution
 ```bash
-# From the project root
-cp backend/.env.example .env
-# Edit .env and set GEMINI_API_KEY
+# Run unit & API test suite
+python -m unittest backend.test_main
 
-docker-compose up --build
+# Run live E2E simulation test
+python backend/test_e2e_simulation.py
 ```
 
-The backend runs in a container with the SQLite database mounted as a persistent volume. The frontend still runs via `npm run dev`.
-
----
-
-## Environment Variables
-
-See [`backend/.env.example`](backend/.env.example):
-
-```env
-# Required: Google Gemini API key
-# Get yours at https://aistudio.google.com/app/apikey
-GEMINI_API_KEY=your_gemini_api_key_here
+### 6. One-Command Docker Setup
+```bash
+docker-compose up --build -d
 ```
 
 ---
 
-## API Reference
+## 📋 API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/tickets` | Submit and classify a new ticket |
-| `GET` | `/tickets` | List tickets (`?category=&priority=`) |
-| `GET` | `/tickets/{id}` | Fetch a single ticket |
-| `PATCH` | `/tickets/{id}` | Update status / final reply |
-| `POST` | `/tickets/{id}/regenerate` | Regenerate suggested reply |
-| `GET` | `/analytics` | Aggregate metrics |
-| `GET` | `/health` | Health check |
+| `POST` | `/tickets` | Submit and classify a new support ticket via Gemini AI |
+| `GET` | `/tickets` | List tickets with optional filters (`?category=&priority=`) |
+| `GET` | `/tickets/{id}` | Fetch single ticket details |
+| `PATCH` | `/tickets/{id}` | Update ticket status or save edited final reply |
+| `POST` | `/tickets/{id}/regenerate` | Regenerate AI suggested reply with varied temperature |
+| `GET` | `/analytics` | Fetch aggregate metrics for analytics dashboard |
+| `GET` | `/health` | Health check endpoint |
 
 ---
 
-## Design Decisions
+## 💡 Engineering & Architectural Decisions
 
-**Why SQLite?**
-SQLite was chosen deliberately — not as a shortcut, but because it is the right tool for this use case. It requires zero infrastructure, ships as a single file inside the repository, has no connection pool to manage, and handles the ticket volumes this system would realistically see at early scale without any tuning. When the system grows to warrant a multi-process deployment, swapping the SQLAlchemy connection string to PostgreSQL is a one-line change. Using a heavyweight database here would be premature optimisation.
+1. **Single-Pass LLM Triage & Reply Generation**:
+   Executing a single prompt that returns `category`, `priority`, `confidence`, `reasoning`, and `suggested_reply` in one JSON payload eliminates double LLM latency, cuts API token costs by 50%, and guarantees contextual harmony between classification rationale and reply drafting.
 
-**Why a single LLM call for both classification and reply generation?**
-Making one Gemini call that returns category, priority, confidence, reasoning, *and* the suggested reply in a single JSON response is both faster and semantically superior to two chained calls. The subject and description are present in context for both tasks simultaneously, so the reply generation can reference the classification rationale without losing context across a round-trip. It also halves API latency and cost per ticket — important for a system that may process many tickets per minute under load.
+2. **Calibrated Confidence Score**:
+   Every classification includes a 0.00–1.00 confidence float. Tickets $\ge 80\%$ confidence can be handled automatically by support teams, while low confidence scores ($< 50\%$) trigger visual warnings for human agent review.
 
-**Why a confidence score?**
-The confidence float is not a vanity metric. It gives human support agents a concrete triage signal: tickets classified at ≥ 80% confidence can be handled autonomously with high trust, while those below 50% should be flagged for manual review before the suggested reply is sent. In the analytics dashboard, `avg_confidence_by_category` surfaces which ticket types the model struggles with — a direct input for prompt iteration or fine-tuning. The confidence score transforms the AI from a black box into an auditable, calibrated system.
+3. **Human Audit Trail & `is_edited` Dataset Creation**:
+   Support agents can edit draft replies directly in the UI. Saving an edit flags `is_edited = true` and updates `final_reply`. This preserves transparency and accumulates a fine-tuning dataset comparing original AI drafts against agent-verified responses.
 
-**Why `is_edited` tracking?**
-Every support reply produced by TicketTriage is either AI-generated (`is_edited = false`) or human-modified (`is_edited = true`). Storing this boolean creates a permanent audit trail distinguishing autonomous AI output from human-reviewed content — important for accountability. More valuably, the set of human-edited replies becomes a high-quality fine-tuning dataset: these are examples where an engineer decided the AI's draft was not good enough and improved it. Over time, analysing the delta between `suggested_reply` and `final_reply` on edited tickets is how you improve the model.
+4. **Prompt Version Cohort Observability (`prompt_version`)**:
+   Every ticket stores `prompt_version` (e.g. `"v1.0"`). When prompts are iterated over time, historical records preserve their cohort tag, enabling retrospective evaluation of prompt drift and classification quality.
 
-**Why `prompt_version`?**
-Every ticket record stores a `prompt_version` string (e.g. `"v1.0"`) that identifies which version of the system prompt classified it, populated from a `PROMPT_VERSION` constant in `llm.py`. This is forward-looking observability for prompt engineering. When the system prompt is updated — to improve priority accuracy, add a new category, or fix an edge case — historical tickets retain their cohort label. This makes it possible to compare classification quality across prompt versions retrospectively, detect regressions, and attribute any drift in the analytics dashboard to a specific prompt change. Most systems treat prompt changes as invisible; this one treats them as traceable deployments.
-
----
-
-## Known Limitations & Future Work
-
-| Limitation | What I'd do with more time |
-|------------|---------------------------|
-| No authentication | Add JWT-based auth with role-based access (agent vs. admin) |
-| SQLite single-file | Migrate to PostgreSQL for multi-process / multi-node deployment |
-| No rate limiting | Add per-IP rate limiting on `POST /tickets` via `slowapi` |
-| Gemini API key in env | Integrate with a secrets manager (AWS Secrets Manager / GCP Secret Manager) |
-| No test suite | Add `pytest` unit tests for `llm.py` fallback paths and FastAPI route tests |
-| Frontend has no pagination | Add cursor-based pagination for the ticket list at scale |
-| No webhook / email notification | Notify the submitter when their ticket is triaged |
-| Analytics doesn't auto-refresh | Add a WebSocket or SSE endpoint for live dashboard updates |
+5. **Resilient Failure Fallbacks**:
+   If Gemini API encounters network timeouts or rate limits, the system catches exceptions, logs detailed diagnostic context, and returns a safe default triage record without crashing or returning HTTP 500 errors to users.
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 18, Vite, Tailwind CSS 3, Recharts, Axios |
-| Backend | Python 3.11, FastAPI, Uvicorn |
-| LLM | Google Gemini Flash (`gemini-1.5-flash`) via `google-genai` SDK |
-| Database | SQLite, SQLAlchemy 2.x (async), aiosqlite |
-| Container | Docker, Docker Compose |
+| Component | Technology |
+|---|---|
+| **Frontend** | React 18, Vite 6, Tailwind CSS 3, Recharts, Axios, Oxlint |
+| **Backend** | Python 3.10+, FastAPI, Uvicorn, Pydantic v2 |
+| **LLM Integration** | Google Gemini 2.0 Flash (`gemini-2.0-flash`) via `google-genai` SDK |
+| **Database** | SQLite, SQLAlchemy 2.0 (async), `aiosqlite` |
+| **CI/CD & Containers**| GitHub Actions, Docker, Docker Compose |
 
 ---
 
-## Project Structure
+## 📁 Repository Structure
 
-```
-tickettriage/
+```text
+TicketTriage/
+├── .github/workflows/ci.yml  # GitHub Actions CI workflow
 ├── backend/
-│   ├── main.py          # FastAPI app, all routes, error handling
-│   ├── models.py        # SQLAlchemy ORM model (Ticket)
-│   ├── database.py      # Async engine, session factory, init_db
-│   ├── llm.py           # Gemini calls, prompt engineering, PROMPT_VERSION
-│   ├── schemas.py       # Pydantic v2 request/response models
+│   ├── main.py               # FastAPI app, REST endpoints, CORS & lifespan
+│   ├── llm.py                # Gemini SDK integration & prompt engineering
+│   ├── database.py           # Async SQLAlchemy engine & session manager
+│   ├── models.py             # ORM database models
+│   ├── schemas.py            # Pydantic v2 schemas
+│   ├── test_main.py          # Automated unit test suite with mock LLM
+│   ├── test_e2e_simulation.py# End-to-end live API simulation runner
 │   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
+│   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── TicketForm.jsx    # Submit form + loading skeleton
-│   │   │   ├── TicketList.jsx    # Filterable table, inline status
-│   │   │   ├── TicketDetail.jsx  # Editable reply, regenerate, copy
-│   │   │   └── Analytics.jsx     # KPI cards + 3 Recharts charts
-│   │   ├── App.jsx               # Tab navigation, layout
+│   │   │   ├── TicketForm.jsx   # 2-column ticket form & AI triage display
+│   │   │   ├── TicketList.jsx   # Filterable ticket table with accordion
+│   │   │   ├── TicketDetail.jsx # Editable reply & regenerate actions
+│   │   │   └── Analytics.jsx    # Real-time KPI cards & Recharts charts
+│   │   ├── utils/
+│   │   │   └── badgeHelpers.js  # Badge styling helpers
+│   │   ├── App.jsx              # Fixed sidebar layout & pill navigation
 │   │   ├── main.jsx
-│   │   └── index.css             # Design system, tokens, animations
-│   ├── index.html
-│   ├── package.json
+│   │   └── index.css            # Custom design system tokens & styles
 │   ├── tailwind.config.js
-│   └── postcss.config.js
-├── docker-compose.yml
+│   ├── package.json
+│   └── vite.config.js
+├── Dockerfile                # Root container build
+├── docker-compose.yml        # Compose configuration
+├── DEPLOYMENT.md             # Production deployment guide
 └── README.md
 ```
