@@ -16,17 +16,31 @@ from sqlalchemy.orm import DeclarativeBase
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Database file lives one level up from this file (project root of backend/)
+# Database connection: reads DATABASE_URL from env or defaults to local SQLite
 # ---------------------------------------------------------------------------
+import os
+
 DB_DIR = Path(__file__).parent
 DB_PATH = DB_DIR / "tickettriage.db"
-DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+DEFAULT_DB_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+
+DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DB_URL)
+
+# Standardize PostgreSQL URLs for asyncpg driver
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+asyncpg://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+connect_args = {}
+if "sqlite" in DATABASE_URL:
+    connect_args["check_same_thread"] = False
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,          # Set True locally for SQL debugging
+    echo=False,
     future=True,
-    connect_args={"check_same_thread": False},
+    connect_args=connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(
