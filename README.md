@@ -2,10 +2,11 @@
 
 [![CI Pipeline](https://github.com/aayushkumbharkar/TicketTriage/actions/workflows/ci.yml/badge.svg)](https://github.com/aayushkumbharkar/TicketTriage/actions)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-TicketTriage-blue?logo=github)](https://github.com/aayushkumbharkar/TicketTriage)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-ticket--triage-5b52f0?style=flat-square)](https://ticket-triage-six.vercel.app/)
 
 TicketTriage classifies support tickets and drafts customer replies in a single Gemini API call, returning structured JSON that includes category, priority, a 0–1 confidence score, a reasoning trace, and a suggested reply. The confidence score is intentional — it gives support teams a signal for when to trust the AI versus review manually. Every ticket also stores a `prompt_version` field, so that when the system prompt is revised, historical records stay tagged to the version that produced them, making it possible to measure how prompt changes affect classification quality over time. Given more time, I'd replace the SQLite backend with a hosted libSQL instance and add a confidence-threshold workflow that routes low-confidence tickets directly to a human queue.
 
-Live demo: [https://ticket-triage-six.vercel.app/](https://ticket-triage-six.vercel.app/)
+
 
 ---
 
@@ -37,7 +38,7 @@ Live demo: [https://ticket-triage-six.vercel.app/](https://ticket-triage-six.ver
 └─────────────────────────────────┘    └──────────────────┘
 ```
 
-Demo: [https://www.loom.com/share/f0a30982b61341f69d29c91a10bd7a30](https://www.loom.com/share/f0a30982b61341f69d29c91a10bd7a30)
+**Demo:** [Watch on Loom](https://www.loom.com/share/f0a30982b61341f69d29c91a10bd7a30)
 
 ---
 
