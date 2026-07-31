@@ -87,7 +87,8 @@ export default function TicketForm() {
     try {
       const { data } = await axios.patch(`${API}/tickets/${result.id}`, {
         final_reply: editableReply,
-        is_edited: true
+        is_edited: true,
+        status: 'In Progress'
       })
       setResult(data)
     } catch {

@@ -11,7 +11,7 @@
 
 TicketTriage is a full-stack AI application engineered with production-grade architectural patterns. The **React frontend** (Vite + Tailwind CSS with custom design system tokens) provides a dark-mode interface for submitting tickets, reviewing AI classification rationale, inline reply editing, and monitoring real-time analytics. It communicates with the **FastAPI backend** over RESTful APIs.
 
-The backend calls **Google Gemini 2.0 Flash** (`gemini-2.0-flash`) via the official `google-genai` SDK using a single-pass JSON-structured system prompt (`response_mime_type="application/json"`). Results are persisted to **SQLite** via an async SQLAlchemy ORM engine (`aiosqlite`).
+The backend calls **Google Gemini 3.6 Flash** (`gemini-3.6-flash`) via the official `google-genai` SDK using a single-pass JSON-structured system prompt (`response_mime_type="application/json"`). Results are persisted to **SQLite** via an async SQLAlchemy ORM engine (`aiosqlite`).
 
 ```
 ┌─────────────────────────────────┐
@@ -34,7 +34,7 @@ The backend calls **Google Gemini 2.0 Flash** (`gemini-2.0-flash`) via the offic
          ▼
 ┌─────────────────────────────────┐    ┌──────────────────┐
 │  Google Gemini Flash            │    │  SQLite (async)  │
-│  gemini-2.0-flash               │    │  SQLAlchemy ORM  │
+│  gemini-3.6-flash               │    │  SQLAlchemy ORM  │
 │  response_mime_type=json        │    │  aiosqlite       │
 └─────────────────────────────────┘    └──────────────────┘
 ```
@@ -141,7 +141,7 @@ docker-compose up --build -d
 |---|---|
 | **Frontend** | React 18, Vite 6, Tailwind CSS 3, Recharts, Axios, Oxlint |
 | **Backend** | Python 3.10+, FastAPI, Uvicorn, Pydantic v2 |
-| **LLM Integration** | Google Gemini 2.0 Flash (`gemini-2.0-flash`) via `google-genai` SDK |
+| **LLM Integration** | Google Gemini 3.6 Flash (`gemini-3.6-flash`) via `google-genai` SDK |
 | **Database** | SQLite, SQLAlchemy 2.0 (async), `aiosqlite` |
 | **CI/CD & Containers**| GitHub Actions, Docker, Docker Compose |
 

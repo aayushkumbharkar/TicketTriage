@@ -41,7 +41,7 @@ PROMPT_VERSION = "v1.0"
 # The ValueError from genai.Client is caught at call-time and returns the
 # safe fallback, keeping the application functional even without a key.
 # ---------------------------------------------------------------------------
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-3.6-flash"
 _client: genai.Client | None = None
 
 
@@ -148,7 +148,7 @@ async def classify_ticket(
                 system_instruction=SYSTEM_PROMPT,
                 response_mime_type="application/json",
                 temperature=0.2,   # Low temperature for deterministic classification
-                max_output_tokens=1024,
+                max_output_tokens=2048,
             ),
         )
 
@@ -224,7 +224,7 @@ async def regenerate_reply(
                     "professional customer support replies. Be concise and helpful."
                 ),
                 temperature=0.8,   # Higher temperature for reply variation
-                max_output_tokens=512,
+                max_output_tokens=2048,
             ),
         )
 

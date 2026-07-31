@@ -230,11 +230,16 @@ html, body {
   align-items: center;
 }
 
-.badge-status-open,
-.badge-status-inprogress {
+.badge-status-open {
   color: #7B7F96;
   background-color: #13151f;
   border: 1px solid #1e2235;
+}
+
+.badge-status-inprogress {
+  color: #FAC775;
+  background-color: rgba(250, 199, 117, 0.08);
+  border: 1px solid rgba(250, 199, 117, 0.2);
 }
 
 .badge-status-resolved {

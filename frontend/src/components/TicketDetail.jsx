@@ -4,6 +4,7 @@ import {
   confidenceBadgeClass,
   priorityBadgeClass,
   categoryBadgeClass,
+  statusBadgeClass,
 } from '../utils/badgeHelpers'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -58,6 +59,7 @@ export default function TicketDetail({ ticket, onUpdate }) {
       const { data } = await axios.patch(`${API}/tickets/${ticket.id}`, {
         final_reply: reply,
         is_edited: true,
+        status: 'In Progress',
       })
       onUpdate?.(data)
       setIsDirty(false)
@@ -111,24 +113,25 @@ export default function TicketDetail({ ticket, onUpdate }) {
         </span>
       </div>
 
-      {/* Status Changer */}
+      {/* Dynamic Status Display & Selector */}
       <div className="flex items-center gap-3">
         <span className="text-[10px] text-[#7B7F96] uppercase tracking-wider">Status</span>
         <div className="flex items-center gap-2">
-          {STATUSES.map(s => (
-            <button
-              key={s}
-              onClick={() => handleStatusChange(s)}
-              disabled={isStatusSaving}
-              className={`text-[11px] px-2.5 py-1 rounded-[4px] border transition-all font-medium ${
-                status === s
-                  ? 'bg-[#6C63FF] border-[#6C63FF] text-white'
-                  : 'border-[#1e2235] text-[#7B7F96] hover:border-[#6C63FF]/50 hover:text-[#E8E9F0] bg-transparent'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+          <span className={statusBadgeClass(status)}>
+            {status}
+          </span>
+          <select
+            value={status}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            disabled={isStatusSaving}
+            className="tt-input text-[11px] py-1 px-2.5 w-auto cursor-pointer border-[#1e2235] bg-[#13151f]"
+          >
+            {STATUSES.map(s => (
+              <option key={s} value={s} className="bg-[#0F1117] text-[#E8E9F0]">
+                {s}
+              </option>
+            ))}
+          </select>
           {isStatusSaving && (
             <svg className="w-3.5 h-3.5 text-[#6C63FF] animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
