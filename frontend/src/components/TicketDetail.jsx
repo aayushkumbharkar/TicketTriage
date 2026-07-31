@@ -166,7 +166,13 @@ export default function TicketDetail({ ticket, onUpdate }) {
         <textarea
           rows={4}
           value={reply}
-          onChange={e => { setReply(e.target.value); setIsDirty(true) }}
+          onChange={e => {
+            setReply(e.target.value)
+            setIsDirty(true)
+            if (status === 'Open') {
+              setStatus('In Progress')
+            }
+          }}
           className="tt-input text-[12px] resize-none"
         />
       </div>

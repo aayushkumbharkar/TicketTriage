@@ -271,7 +271,12 @@ export default function TicketForm() {
                 <textarea
                   rows={5}
                   value={editableReply}
-                  onChange={(e) => setEditableReply(e.target.value)}
+                  onChange={(e) => {
+                    setEditableReply(e.target.value)
+                    if (result && result.status === 'Open') {
+                      setResult(prev => ({ ...prev, status: 'In Progress' }))
+                    }
+                  }}
                   className="tt-input resize-none text-[12px]"
                 />
               </div>
