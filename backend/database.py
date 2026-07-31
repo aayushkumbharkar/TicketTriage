@@ -16,7 +16,7 @@ from sqlalchemy.orm import DeclarativeBase
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Database connection: reads DATABASE_URL from env or defaults to local SQLite
+# Database connection: reads DATABASE_URL from env or defaults to local SQLite (v1.0.2)
 # ---------------------------------------------------------------------------
 import os
 
