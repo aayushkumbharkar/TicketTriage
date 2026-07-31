@@ -1,17 +1,15 @@
 # TicketTriage
 
-**AI Support Ticket Classifier & Response Assistant**
-
 [![CI Pipeline](https://github.com/aayushkumbharkar/TicketTriage/actions/workflows/ci.yml/badge.svg)](https://github.com/aayushkumbharkar/TicketTriage/actions)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-TicketTriage-blue?logo=github)](https://github.com/aayushkumbharkar/TicketTriage)
 
+TicketTriage classifies support tickets and drafts customer replies in a single Gemini API call, returning structured JSON that includes category, priority, a 0–1 confidence score, a reasoning trace, and a suggested reply. The confidence score is intentional — it gives support teams a signal for when to trust the AI versus review manually. Every ticket also stores a `prompt_version` field, so that when the system prompt is revised, historical records stay tagged to the version that produced them, making it possible to measure how prompt changes affect classification quality over time. Given more time, I'd replace the SQLite backend with a hosted libSQL instance and add a confidence-threshold workflow that routes low-confidence tickets directly to a human queue.
+
+Live demo: [https://ticket-triage-six.vercel.app/](https://ticket-triage-six.vercel.app/)
+
 ---
 
-## 🏛️ Architecture Overview
-
-TicketTriage is a full-stack AI application engineered with production-grade architectural patterns. The **React frontend** (Vite + Tailwind CSS with custom design system tokens) provides a dark-mode interface for submitting tickets, reviewing AI classification rationale, inline reply editing, and monitoring real-time analytics. It communicates with the **FastAPI backend** over RESTful APIs.
-
-The backend calls **Google Gemini 3.6 Flash** (`gemini-3.6-flash`) via the official `google-genai` SDK using a single-pass JSON-structured system prompt (`response_mime_type="application/json"`). Results are persisted to **SQLite** via an async SQLAlchemy ORM engine (`aiosqlite`).
+## Architecture
 
 ```
 ┌─────────────────────────────────┐
@@ -39,70 +37,63 @@ The backend calls **Google Gemini 3.6 Flash** (`gemini-3.6-flash`) via the offic
 └─────────────────────────────────┘    └──────────────────┘
 ```
 
+Demo: [https://www.loom.com/share/f0a30982b61341f69d29c91a10bd7a30](https://www.loom.com/share/f0a30982b61341f69d29c91a10bd7a30)
+
 ---
 
-## ⚡ Quick Setup & Running Locally
+## Running locally
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Google Gemini API key (Free at [aistudio.google.com](https://aistudio.google.com/app/apikey))
+**Prerequisites:** Python 3.10+, Node.js 18+, a Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey).
 
-### 1. Clone the repository
+Clone the repo and set up the backend:
+
 ```bash
 git clone https://github.com/aayushkumbharkar/TicketTriage.git
-cd TicketTriage
-```
-
-### 2. Backend Setup
-```bash
-cd backend
+cd TicketTriage/backend
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
-
-cp .env.example .env
-# Edit .env and set your GEMINI_API_KEY
+cp .env.example .env         # then set GEMINI_API_KEY in .env
 ```
 
-### 3. Run Backend Server
+Start the backend:
+
 ```bash
-# From project root (TicketTriage/)
+# From project root
 python -m uvicorn backend.main:app --reload --port 8000
+# API:  http://127.0.0.1:8000
+# Docs: http://127.0.0.1:8000/docs
 ```
-- API: `http://127.0.0.1:8000`
-- Interactive Swagger API Docs: `http://127.0.0.1:8000/docs`
 
-### 4. Frontend Setup & Launch
+Start the frontend:
+
 ```bash
 cd frontend
 npm install
 npm run dev
-```
-- Web Application UI: `http://127.0.0.1:5173`
-
-### 5. Automated Tests Execution
-```bash
-# Run unit & API test suite
-python -m unittest backend.test_main
-
-# Run live E2E simulation test
-python backend/test_e2e_simulation.py
+# UI: http://127.0.0.1:5173
 ```
 
-### 6. One-Command Docker Setup
+Or run everything with Docker:
+
 ```bash
 docker-compose up --build -d
 ```
 
+### Testing
+
+```bash
+# Unit and API tests with a mock LLM
+python -m unittest backend.test_main
+
+# Live end-to-end simulation against the running server
+python backend/test_e2e_simulation.py
+```
+
 ---
 
-## 📋 API Reference
+## API Reference
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -116,26 +107,35 @@ docker-compose up --build -d
 
 ---
 
-## 💡 Engineering & Architectural Decisions
+## Design decisions
 
-1. **Single-Pass LLM Triage & Reply Generation**:
-   Executing a single prompt that returns `category`, `priority`, `confidence`, `reasoning`, and `suggested_reply` in one JSON payload eliminates double LLM latency, cuts API token costs by 50%, and guarantees contextual harmony between classification rationale and reply drafting.
+The system prompt asks Gemini to return a single JSON object containing category, priority, confidence, reasoning, and suggested_reply in one call. Splitting triage and reply generation into two separate calls would double latency and token cost, and the two outputs would lose the contextual link between why a ticket was classified a certain way and how the reply should be framed. One call keeps both in the same reasoning context.
 
-2. **Calibrated Confidence Score**:
-   Every classification includes a 0.00–1.00 confidence float. Tickets $\ge 80\%$ confidence can be handled automatically by support teams, while low confidence scores ($< 50\%$) trigger visual warnings for human agent review.
+The confidence score is a 0.00–1.00 float returned by Gemini as part of the structured output. The intention is that tickets above 0.80 can flow through automatically, while anything below 0.50 surfaces a visual warning in the UI prompting an agent to review. This turns the AI's uncertainty into an actionable signal rather than hiding it.
 
-3. **Human Audit Trail & `is_edited` Dataset Creation**:
-   Support agents can edit draft replies directly in the UI. Saving an edit flags `is_edited = true` and updates `final_reply`. This preserves transparency and accumulates a fine-tuning dataset comparing original AI drafts against agent-verified responses.
+When a support agent edits a suggested reply and saves it, the system sets `is_edited = true` and writes the modified text to `final_reply` while preserving the original in `suggested_reply`. This does two things: it gives supervisors a clean audit trail, and it passively accumulates a fine-tuning dataset — every row with `is_edited = true` is a human-labelled example of a better reply, ready to use for future model improvement.
 
-4. **Prompt Version Cohort Observability (`prompt_version`)**:
-   Every ticket stores `prompt_version` (e.g. `"v1.0"`). When prompts are iterated over time, historical records preserve their cohort tag, enabling retrospective evaluation of prompt drift and classification quality.
+Every ticket row stores a `prompt_version` field (currently `"v1.0"`). When the system prompt is changed — whether to fix a misclassification pattern or add a new category — existing records remain tagged to the prompt version that created them. This makes it possible to compare classification distributions across prompt versions and catch regressions before they affect the whole dataset.
 
-5. **Resilient Failure Fallbacks**:
-   If Gemini API encounters network timeouts or rate limits, the system catches exceptions, logs detailed diagnostic context, and returns a safe default triage record without crashing or returning HTTP 500 errors to users.
+If the Gemini API returns malformed JSON, a network error, or a timeout, the system catches the exception, logs the raw response for debugging, and stores the ticket with `category=General`, `priority=Medium`, `confidence=0.0`. The ticket is not dropped. The agent sees the fallback reply and a note that classification failed — no HTTP 500 is surfaced to the user.
+
+The live deployment at [ticket-triage-six.vercel.app](https://ticket-triage-six.vercel.app/) serves the React frontend. The backend runs locally because Vercel cannot host a persistent SQLite file — the database would reset on every cold deployment. This is a known limitation. The immediate next step would be swapping SQLite for [Turso](https://turso.tech/) (hosted libSQL) or a serverless Postgres like Neon, which would make the full stack deployable without any local process.
 
 ---
 
-## 🛠️ Tech Stack
+## Known limitations and next steps
+
+SQLite works well for a local prototype but is not viable on a serverless host. Every new Vercel deployment spins up a fresh container and the database file does not persist between cold starts. The fix is straightforward: Turso provides a hosted libSQL API-compatible with SQLAlchemy, or Neon provides serverless Postgres — either would require about an hour of migration work and a connection string swap in `database.py`.
+
+There is no authentication layer. Any client that knows the API URL can submit tickets, read the full ticket list, or delete records. For a real deployment the minimum viable fix would be an API key header validated against an environment variable, with rate limiting applied per key. FastAPI makes this easy to layer in as a dependency.
+
+The API has no rate limiting. A single client can submit tickets in a tight loop and exhaust the Gemini API quota. The short-term fix is `slowapi` (a FastAPI-compatible rate limiter) applied to the `POST /tickets` endpoint. The longer-term fix is a task queue — Celery or ARQ — so that LLM calls are processed asynchronously and the HTTP response returns immediately with a job ID.
+
+Gemini introduces 1–3 seconds of latency per ticket submission, and the first call after a cold start on the API host can take significantly longer. The UI handles this with a loading state, but there is no streaming. The next version would stream the reply token-by-token using Gemini's streaming API and a server-sent events endpoint, which would make the latency feel much shorter even if the total time is the same.
+
+---
+
+## Tech Stack
 
 | Component | Technology |
 |---|---|
@@ -147,7 +147,7 @@ docker-compose up --build -d
 
 ---
 
-## 📁 Repository Structure
+## Project structure
 
 ```text
 TicketTriage/
