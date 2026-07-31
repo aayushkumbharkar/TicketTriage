@@ -24,7 +24,12 @@ DB_DIR = Path(__file__).parent
 DB_PATH = DB_DIR / "tickettriage.db"
 DEFAULT_DB_URL = f"sqlite+aiosqlite:///{DB_PATH}"
 
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DB_URL)
+DATABASE_URL = (
+    os.getenv("DATABASE_URL")
+    or os.getenv("databased_url")
+    or os.getenv("DATABASE_URI")
+    or DEFAULT_DB_URL
+)
 
 # Standardize PostgreSQL URLs for asyncpg driver
 if DATABASE_URL.startswith("postgres://"):
