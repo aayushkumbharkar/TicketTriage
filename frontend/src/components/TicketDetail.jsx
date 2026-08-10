@@ -157,6 +157,18 @@ export default function TicketDetail({ ticket, onUpdate }) {
         </div>
       </div>
 
+      {/* Original AI Suggestion (Audit Trail when is_edited is true) */}
+      {t.is_edited && t.suggested_reply && (
+        <div>
+          <span className="text-[10px] text-[#7B7F96] uppercase tracking-wider block mb-1">
+            Original AI Suggestion (Audit Trail)
+          </span>
+          <div className="bg-[#13151f] p-3 rounded-[6px] border border-[#1e2235] text-[12px] text-[#a0a4b8] whitespace-pre-wrap font-mono-data">
+            {t.suggested_reply}
+          </div>
+        </div>
+      )}
+
       {/* Reply textarea */}
       <div>
         <div className="flex items-center justify-between mb-1">

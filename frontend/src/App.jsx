@@ -203,15 +203,17 @@ export default function App() {
           </div>
         </header>
 
-        {/* Content Area — key forces remount → triggers entry animation */}
-        <main
-          key={activeTab}
-          className="animate-fade-slide-up"
-          style={{ flex: 1, padding: 24, maxWidth: 1280, width: '100%', margin: '0 auto' }}
-        >
-          {activeTab === 'submit'    && <TicketForm />}
-          {activeTab === 'tickets'   && <TicketList />}
-          {activeTab === 'analytics' && <Analytics />}
+        {/* Content Area — preserve component state across tab switching */}
+        <main style={{ flex: 1, padding: 24, maxWidth: 1280, width: '100%', margin: '0 auto' }}>
+          <div className="animate-fade-slide-up" style={{ display: activeTab === 'submit' ? 'block' : 'none' }}>
+            <TicketForm />
+          </div>
+          <div className="animate-fade-slide-up" style={{ display: activeTab === 'tickets' ? 'block' : 'none' }}>
+            <TicketList />
+          </div>
+          <div className="animate-fade-slide-up" style={{ display: activeTab === 'analytics' ? 'block' : 'none' }}>
+            <Analytics />
+          </div>
         </main>
       </div>
     </div>

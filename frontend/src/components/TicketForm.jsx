@@ -144,11 +144,29 @@ export default function TicketForm() {
       {/* ── Left Panel: Ticket Form ── */}
       <div style={panelStyle}>
         {/* Panel title — no uppercase eyebrow */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12l7-7 7 7" />
-          </svg>
-          <span className="panel-title">New Ticket</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12l7-7 7 7" />
+            </svg>
+            <span className="panel-title">New Ticket</span>
+          </div>
+          {(form.subject || form.description || result) && (
+            <button
+              type="button"
+              onClick={() => {
+                setForm({ subject: '', description: '', submitter_email: '' })
+                setResult(null)
+                setEditableReply('')
+                setOriginalReply('')
+                setErrors({})
+              }}
+              className="btn-ghost"
+              style={{ fontSize: 11, padding: '3px 8px' }}
+            >
+              Reset Form
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
