@@ -87,3 +87,38 @@ class Ticket(Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Ticket id={self.id!r} subject={self.subject!r} status={self.status!r}>"
+
+
+class PromptConfig(Base):
+    """
+    Singleton configuration table for the active system prompt.
+
+    Design: always exactly one row (id=1). The `version` field uses semantic
+    versioning (v{major}.{minor}). When the prompt changes:
+    - Minor bump (v1.0 → v1.1): wording tweaks, same structure
+    - Major bump (v1.x → v2.0): structural or intent-level rewrite
+
+    Every Ticket stores the `prompt_version` string at classification time,
+    enabling retrospective quality comparisons across prompt cohorts.
+    """
+    __tablename__ = "prompt_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+
+    version: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="v1.0"
+    )
+
+    system_prompt: Mapped[str] = mapped_column(
+        Text, nullable=False, default=""
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utcnow,
+        onupdate=_utcnow,
+    )
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<PromptConfig version={self.version!r}>"

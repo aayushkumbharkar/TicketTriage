@@ -17,11 +17,100 @@ const STATUSES    = ['All', 'Open', 'In Progress', 'Resolved']
 function formatDate(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
   })
+}
+
+/* ── Filter Pill Group ── */
+function PillGroup({ label, options, value, onChange }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 11, color: 'var(--text-ghost)', fontWeight: 500, paddingRight: 2, whiteSpace: 'nowrap' }}>
+        {label}
+      </span>
+      {options.map(opt => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          className={`filter-pill ${value === opt ? 'filter-pill-active' : ''}`}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/* ── Skeleton rows while loading ── */
+function SkeletonRows() {
+  return (
+    <>
+      {[...Array(6)].map((_, i) => (
+        <div
+          key={i}
+          className="animate-fade-slide-up"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            borderBottom: '1px solid rgba(255,255,255,0.03)',
+            gap: 12,
+          }}
+        >
+          <div style={{ flex: '0 0 30%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="skeleton" style={{ height: 13, width: '75%', borderRadius: 4 }} />
+            <div className="skeleton" style={{ height: 10, width: '50%', borderRadius: 4 }} />
+          </div>
+          <div className="skeleton" style={{ flex: '0 0 14%', height: 20, borderRadius: 4 }} />
+          <div className="skeleton" style={{ flex: '0 0 12%', height: 20, borderRadius: 4 }} />
+          <div className="skeleton" style={{ flex: '0 0 10%', height: 20, borderRadius: 4 }} />
+          <div className="skeleton" style={{ flex: '0 0 12%', height: 20, borderRadius: 4 }} />
+          <div className="skeleton" style={{ flex: '0 0 12%', height: 13, borderRadius: 4 }} />
+        </div>
+      ))}
+    </>
+  )
+}
+
+/* ── Empty State ── */
+function EmptyState({ hasFilters }) {
+  return (
+    <div style={{
+      padding: '56px 24px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      gap: 10,
+    }}>
+      <div style={{
+        width: 48,
+        height: 48,
+        borderRadius: '50%',
+        backgroundColor: 'var(--bg-raised)',
+        border: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+      }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </svg>
+      </div>
+      <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+        {hasFilters ? 'No tickets match your filters' : 'No tickets yet'}
+      </p>
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', maxWidth: 220, lineHeight: 1.6 }}>
+        {hasFilters
+          ? 'Try adjusting the category, priority, or status filters above.'
+          : 'Submit your first ticket from the Submit Ticket tab.'
+        }
+      </p>
+    </div>
+  )
 }
 
 export default function TicketList() {
@@ -30,11 +119,11 @@ export default function TicketList() {
   const [error, setError]           = useState(null)
   const [expandedId, setExpandedId] = useState(null)
 
-  // Filters state
-  const [category, setCategory]     = useState('All')
-  const [priority, setPriority]     = useState('All')
-  const [statusFilter, setStatus]   = useState('All')
-  const [searchQuery, setSearch]    = useState('')
+  // Filters
+  const [category, setCategory]   = useState('All')
+  const [priority, setPriority]   = useState('All')
+  const [statusFilter, setStatus] = useState('All')
+  const [searchQuery, setSearch]  = useState('')
 
   const fetchTickets = useCallback(async () => {
     setLoading(true)
@@ -58,186 +147,184 @@ export default function TicketList() {
     setTickets(prev => prev.map(t => t.id === updated.id ? updated : t))
   }
 
-  // Client-side filtering for status and search query
   const filteredTickets = tickets.filter(t => {
     if (statusFilter !== 'All' && t.status !== statusFilter) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
-      const matchSubject = t.subject?.toLowerCase().includes(q)
-      const matchEmail = t.submitter_email?.toLowerCase().includes(q)
-      const matchId = t.id?.toLowerCase().includes(q)
-      if (!matchSubject && !matchEmail && !matchId) return false
+      const match = t.subject?.toLowerCase().includes(q) ||
+                    t.submitter_email?.toLowerCase().includes(q) ||
+                    t.id?.toLowerCase().includes(q)
+      if (!match) return false
     }
     return true
   })
 
+  const hasActiveFilters = category !== 'All' || priority !== 'All' || statusFilter !== 'All' || searchQuery.trim()
+
   return (
-    <div className="w-full space-y-4">
-      {/* ── Filters Row Above Table ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#1A1D27] p-3 rounded-[10px] border border-[#1e2235]">
-        {/* Search input */}
-        <div className="relative flex-1 min-w-[200px]">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search tickets by subject, email, or ID..."
-            className="tt-input text-[12px] pl-8 py-1.5"
-          />
-          <svg className="w-3.5 h-3.5 text-[#7B7F96] absolute left-2.5 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-        {/* Dropdowns */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Category Dropdown */}
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-            className="tt-input text-[12px] py-1.5 px-2.5 w-auto cursor-pointer"
-          >
-            {CATEGORIES.map(c => (
-              <option key={c} value={c} className="bg-[#0F1117] text-[#E8E9F0]">
-                {c === 'All' ? 'Category: All' : c}
-              </option>
-            ))}
-          </select>
+      {/* ── Filter Bar ── */}
+      <div style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-panel)',
+        padding: '12px 14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}>
+        {/* Search row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 340 }}>
+            <svg
+              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}
+              width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by subject, email, or ID..."
+              className="tt-input"
+              style={{ paddingLeft: 30, fontSize: 12, paddingTop: 6, paddingBottom: 6 }}
+            />
+          </div>
 
-          {/* Priority Dropdown */}
-          <select
-            value={priority}
-            onChange={e => setPriority(e.target.value)}
-            className="tt-input text-[12px] py-1.5 px-2.5 w-auto cursor-pointer"
-          >
-            {PRIORITIES.map(p => (
-              <option key={p} value={p} className="bg-[#0F1117] text-[#E8E9F0]">
-                {p === 'All' ? 'Priority: All' : p}
-              </option>
-            ))}
-          </select>
-
-          {/* Status Dropdown */}
-          <select
-            value={statusFilter}
-            onChange={e => setStatus(e.target.value)}
-            className="tt-input text-[12px] py-1.5 px-2.5 w-auto cursor-pointer"
-          >
-            {STATUSES.map(s => (
-              <option key={s} value={s} className="bg-[#0F1117] text-[#E8E9F0]">
-                {s === 'All' ? 'Status: All' : s}
-              </option>
-            ))}
-          </select>
-
-          {/* Refresh Button */}
+          {/* Refresh button */}
           <button
             onClick={fetchTickets}
-            className="btn-ghost text-[12px] py-1.5 px-2.5"
+            className="btn-ghost"
             title="Refresh tickets"
+            style={{ padding: '6px 10px', flexShrink: 0 }}
           >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 4v6h6" /><path d="M23 20v-6h-6" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
             </svg>
           </button>
+
+          {/* Ticket count */}
+          {!loading && (
+            <span className="font-mono-data" style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              {filteredTickets.length} ticket{filteredTickets.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {/* Pill filter rows */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+          <PillGroup label="Category" options={CATEGORIES} value={category} onChange={setCategory} />
+          <div style={{ width: 1, height: 18, backgroundColor: 'var(--border)', flexShrink: 0 }} />
+          <PillGroup label="Priority" options={PRIORITIES} value={priority} onChange={setPriority} />
+          <div style={{ width: 1, height: 18, backgroundColor: 'var(--border)', flexShrink: 0 }} />
+          <PillGroup label="Status" options={STATUSES} value={statusFilter} onChange={setStatus} />
         </div>
       </div>
 
       {/* Error state */}
       {error && (
-        <div className="p-3 rounded-[6px] bg-[rgba(226,75,74,0.12)] border border-[#E24B4A]/30 text-[#f09595] text-[12px]">
+        <div style={{
+          padding: '10px 14px',
+          borderRadius: 6,
+          backgroundColor: 'rgba(226, 75, 74, 0.10)',
+          border: '1px solid rgba(226, 75, 74, 0.25)',
+          color: '#f09090',
+          fontSize: 12,
+        }}>
           ⚠ {error}
         </div>
       )}
 
       {/* ── Table Card ── */}
-      <div className="bg-[#1A1D27] border border-[#1e2235] rounded-[10px] p-0 overflow-hidden">
+      <div style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-panel)',
+        overflow: 'hidden',
+      }}>
         {loading ? (
-          <div className="p-8 text-center text-[#7B7F96] text-[12px]">
-            Loading ticket list...
-          </div>
+          <SkeletonRows />
         ) : filteredTickets.length === 0 ? (
-          <div className="p-12 text-center text-[#7B7F96]">
-            <p className="text-[13px] font-medium text-[#E8E9F0] mb-1">No tickets match your filter</p>
-            <p className="text-[11px]">Try adjusting your search query or filter options.</p>
-          </div>
+          <EmptyState hasFilters={hasActiveFilters} />
         ) : (
-          <div className="overflow-x-auto">
+          <div style={{ overflowX: 'auto' }}>
             <table className="tt-table">
               <thead>
                 <tr>
-                  <th>Subject</th>
-                  <th>Category</th>
-                  <th>Priority</th>
-                  <th>Confidence</th>
-                  <th>Status</th>
-                  <th>Created At</th>
+                  <th style={{ width: '30%' }}>Subject</th>
+                  <th style={{ width: '15%' }}>Category</th>
+                  <th style={{ width: '12%' }}>Priority</th>
+                  <th style={{ width: '11%' }}>Confidence</th>
+                  <th style={{ width: '13%' }}>Status</th>
+                  <th style={{ width: '15%' }}>Created</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTickets.map(t => {
+                {filteredTickets.map((t, idx) => {
                   const isExpanded = expandedId === t.id
                   return (
                     <tr key={t.id} className="contents-group">
-                      <td colSpan={6} className="p-0 border-b border-[#13151f]">
-                        {/* Main row */}
+                      <td colSpan={6} style={{ padding: 0, borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                        {/* Main row — relative for the pseudo-element left bar */}
                         <div
+                          className="animate-fade-slide-up table-row-hover-group"
                           onClick={() => setExpandedId(isExpanded ? null : t.id)}
-                          className="table-row-interactive flex items-center justify-between px-4 py-2.5 hover:bg-[#1c1f30] transition-colors cursor-pointer"
+                          style={{
+                            animationDelay: `${idx * 20}ms`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 16px',
+                            cursor: 'pointer',
+                            position: 'relative',
+                          }}
                         >
-                          {/* Subject column */}
-                          <div className="w-[30%] min-w-[200px] pr-2">
-                            <div className="text-[#E8E9F0] text-[13px] font-medium truncate">
+                          {/* Subject + email */}
+                          <div style={{ flex: '0 0 30%', minWidth: 0, paddingRight: 12 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {t.subject}
                             </div>
                             {t.submitter_email && (
-                              <div className="text-[11px] text-[#7B7F96] truncate">
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
                                 {t.submitter_email}
                               </div>
                             )}
                           </div>
 
                           {/* Category */}
-                          <div className="w-[15%]">
-                            <span className={categoryBadgeClass(t.category)}>
-                              {t.category}
-                            </span>
+                          <div style={{ flex: '0 0 15%' }}>
+                            <span className={categoryBadgeClass(t.category)}>{t.category}</span>
                           </div>
 
                           {/* Priority */}
-                          <div className="w-[13%]">
-                            <span className={priorityBadgeClass(t.priority)}>
-                              {t.priority}
-                            </span>
+                          <div style={{ flex: '0 0 12%' }}>
+                            <span className={priorityBadgeClass(t.priority)}>{t.priority}</span>
                           </div>
 
                           {/* Confidence */}
-                          <div className="w-[12%]">
+                          <div style={{ flex: '0 0 11%' }}>
                             <span className={confidenceBadgeClass(t.confidence)}>
                               {(t.confidence * 100).toFixed(0)}%
                             </span>
                           </div>
 
                           {/* Status */}
-                          <div className="w-[13%]">
-                            <span className={statusBadgeClass(t.status)}>
-                              {t.status}
-                            </span>
+                          <div style={{ flex: '0 0 13%' }}>
+                            <span className={statusBadgeClass(t.status)}>{t.status}</span>
                           </div>
 
                           {/* Created At */}
-                          <div className="w-[13%] font-mono-data text-[12px] text-[#7B7F96]">
+                          <div className="font-mono-data" style={{ flex: '0 0 15%', fontSize: 11, color: 'var(--text-muted)' }}>
                             {formatDate(t.created_at)}
                           </div>
                         </div>
 
                         {/* Expandable detail row */}
                         {isExpanded && (
-                          <div className="px-4 pb-4 bg-[#13151f]/40">
-                            <TicketDetail
-                              ticket={t}
-                              onUpdate={handleTicketUpdate}
-                            />
+                          <div className="animate-fade-in" style={{ padding: '0 16px 16px', backgroundColor: 'rgba(0,0,0,0.15)' }}>
+                            <TicketDetail ticket={t} onUpdate={handleTicketUpdate} />
                           </div>
                         )}
                       </td>

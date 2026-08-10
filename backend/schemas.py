@@ -107,3 +107,30 @@ class AnalyticsResponse(BaseModel):
     tickets_by_category: dict[str, int]
     tickets_by_priority: dict[str, int]
     avg_confidence_by_category: dict[str, float]
+
+
+# ---------------------------------------------------------------------------
+# Prompt management schemas
+# ---------------------------------------------------------------------------
+
+class PromptResponse(BaseModel):
+    """Returned by GET /prompt and PUT /prompt."""
+    version: str
+    system_prompt: str
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PromptUpdate(BaseModel):
+    """Request body for PUT /prompt."""
+    system_prompt: str = Field(..., min_length=10)
+    bump_type: str = Field(default="minor")
+
+    @field_validator("bump_type")
+    @classmethod
+    def validate_bump_type(cls, v: str) -> str:
+        if v not in {"minor", "major"}:
+            raise ValueError("bump_type must be 'minor' or 'major'")
+        return v
+

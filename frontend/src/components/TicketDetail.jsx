@@ -160,8 +160,17 @@ export default function TicketDetail({ ticket, onUpdate }) {
       {/* Reply textarea */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] text-[#7B7F96] uppercase tracking-wider">Suggested Reply</span>
-          {t.is_edited && <span className="font-mono-data text-[10px] text-[#FAC775]">Edited by agent</span>}
+          {t.is_edited ? (
+            <span className="flex items-center gap-1.5 text-[10px] text-[#52C9A0] uppercase tracking-wider font-semibold">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Final Reply (Saved)
+            </span>
+          ) : (
+            <span className="text-[10px] text-[#7B7F96] uppercase tracking-wider">Suggested Reply</span>
+          )}
+          {isDirty && <span className="font-mono-data text-[10px] text-[#FAC775]">Unsaved changes</span>}
         </div>
         <textarea
           rows={4}
@@ -174,6 +183,7 @@ export default function TicketDetail({ ticket, onUpdate }) {
             }
           }}
           className="tt-input text-[12px] resize-none"
+          style={t.is_edited && !isDirty ? { borderColor: 'rgba(82,201,160,0.35)' } : {}}
         />
       </div>
 

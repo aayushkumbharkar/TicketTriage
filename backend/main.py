@@ -26,9 +26,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db, init_db
 from backend.llm import PROMPT_VERSION, classify_ticket, regenerate_reply
-from backend.models import Ticket
+import backend.llm as _llm_module
+from backend.models import PromptConfig, Ticket
 from backend.schemas import (
     AnalyticsResponse,
+    PromptResponse,
+    PromptUpdate,
     RegenerateResponse,
     TicketCreate,
     TicketResponse,
@@ -357,6 +360,75 @@ async def get_analytics(db: AsyncSession = Depends(get_db)) -> AnalyticsResponse
         tickets_by_priority=tickets_by_priority,
         avg_confidence_by_category=avg_confidence_by_category,
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /prompt — read the active system prompt
+# ---------------------------------------------------------------------------
+@app.get("/prompt", response_model=PromptResponse)
+async def get_prompt(db: AsyncSession = Depends(get_db)) -> PromptResponse:
+    """Return the active system prompt configuration (singleton row id=1)."""
+    config = await db.get(PromptConfig, 1)
+    if config is None:
+        raise HTTPException(status_code=404, detail="Prompt config not found.")
+    return PromptResponse.model_validate(config)
+
+
+# ---------------------------------------------------------------------------
+# PUT /prompt — update the system prompt and auto-bump version
+# ---------------------------------------------------------------------------
+@app.put("/prompt", response_model=PromptResponse)
+async def update_prompt(
+    payload: PromptUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> PromptResponse:
+    """
+    Update the active system prompt text and bump the semantic version.
+
+    bump_type="minor" increments the patch: v1.0 → v1.1 → v1.2 …
+    bump_type="major" increments the major version: v1.x → v2.0
+
+    The in-memory SYSTEM_PROMPT in llm.py is also updated immediately so
+    new ticket classifications use the new prompt without requiring a restart.
+    Old tickets retain their original prompt_version tag for cohort comparison.
+    """
+    config = await db.get(PromptConfig, 1)
+    if config is None:
+        raise HTTPException(status_code=404, detail="Prompt config not found.")
+
+    # Parse current version string: "v{major}.{minor}"
+    try:
+        raw = config.version.lstrip("v")
+        major_s, minor_s = raw.split(".")
+        major, minor = int(major_s), int(minor_s)
+    except Exception:
+        major, minor = 1, 0
+
+    if payload.bump_type == "major":
+        major += 1
+        minor = 0
+    else:  # minor
+        minor += 1
+
+    new_version = f"v{major}.{minor}"
+
+    config.system_prompt = payload.system_prompt
+    config.version = new_version
+
+    try:
+        await db.commit()
+        await db.refresh(config)
+    except Exception as exc:
+        logger.error("Failed to update prompt config: %s", exc, exc_info=True)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update prompt configuration.")
+
+    # Update the in-memory prompt so the next classify_ticket call uses the new text
+    _llm_module.SYSTEM_PROMPT = payload.system_prompt
+    _llm_module.PROMPT_VERSION = new_version
+
+    logger.info("Prompt updated — new version=%s", new_version)
+    return PromptResponse.model_validate(config)
 
 
 # ---------------------------------------------------------------------------

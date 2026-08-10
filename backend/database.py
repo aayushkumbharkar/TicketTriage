@@ -67,12 +67,28 @@ class Base(DeclarativeBase):
 
 
 async def init_db() -> None:
-    """Create all tables defined on Base.metadata. Called once at startup."""
+    """Create all tables and seed the PromptConfig singleton. Called once at startup."""
     async with engine.begin() as conn:
         # Import models here to ensure they are registered on Base.metadata
         from backend import models  # noqa: F401
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialised at %s", DB_PATH)
+
+    # Seed the PromptConfig singleton (id=1) if it doesn't already exist.
+    # Importing here avoids circular imports — models import Base from this module.
+    from backend.models import PromptConfig
+    from backend.llm import SYSTEM_PROMPT, PROMPT_VERSION
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(PromptConfig).where(PromptConfig.id == 1))
+        existing = result.scalar_one_or_none()
+        if existing is None:
+            session.add(PromptConfig(id=1, version=PROMPT_VERSION, system_prompt=SYSTEM_PROMPT))
+            await session.commit()
+            logger.info("PromptConfig seeded with default prompt — version=%s", PROMPT_VERSION)
+        else:
+            logger.info("PromptConfig already exists — version=%s", existing.version)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

@@ -3,52 +3,75 @@ import TicketForm from './components/TicketForm'
 import TicketList from './components/TicketList'
 import Analytics from './components/Analytics'
 
+/* ── Icons (inline SVG — no external dependency) ── */
+const IconTriageMark = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="18" height="18" rx="5" fill="var(--accent)" />
+    <path
+      d="M9 4L11.2 8.4H13.8L11.8 10.8L12.6 14L9 12L5.4 14L6.2 10.8L4.2 8.4H6.8L9 4Z"
+      fill="white"
+      strokeWidth="0"
+    />
+  </svg>
+)
+
+const IconSubmit = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14M5 12l7-7 7 7" />
+  </svg>
+)
+
+const IconList = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+  </svg>
+)
+
+const IconAnalytics = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 20V10M12 20V4M6 20v-6" />
+  </svg>
+)
+
 const NAV_ITEMS = [
-  {
-    id: 'submit',
-    label: 'Submit Ticket',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-      </svg>
-    )
-  },
-  {
-    id: 'tickets',
-    label: 'Ticket List',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-      </svg>
-    )
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    )
-  },
+  { id: 'submit',    label: 'Submit Ticket', icon: <IconSubmit /> },
+  { id: 'tickets',   label: 'Ticket List',   icon: <IconList /> },
+  { id: 'analytics', label: 'Analytics',     icon: <IconAnalytics /> },
 ]
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('submit')
 
   return (
-    <div className="flex min-h-screen bg-[#0F1117] text-[#E8E9F0] font-sans antialiased">
-      {/* ── Left Sidebar (200px fixed width) ── */}
-      <aside className="w-[200px] min-w-[200px] bg-[#13151f] border-r border-[#1e2235] flex flex-col justify-between p-4 sticky top-0 h-screen">
+    <div className="flex min-h-screen antialiased" style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+
+      {/* ── Left Sidebar ── */}
+      <aside
+        style={{
+          width: 210,
+          minWidth: 210,
+          backgroundColor: 'var(--bg-sidebar)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '16px 10px',
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+        }}
+      >
         <div>
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 px-2 py-3 mb-6">
-            <span className="w-2 h-2 rounded-full bg-[#6C63FF] shrink-0" />
-            <span className="text-[15px] font-semibold text-[#E8E9F0] tracking-tight">TicketTriage</span>
+          {/* Logo — distinct brand mark */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', marginBottom: 20 }}>
+            <IconTriageMark />
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              TicketTriage
+            </span>
           </div>
 
-          {/* Navigation items */}
-          <nav className="flex flex-col gap-1">
+          {/* Navigation */}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {NAV_ITEMS.map(item => {
               const isActive = activeTab === item.id
               return (
@@ -56,35 +79,75 @@ export default function App() {
                   key={item.id}
                   id={`nav-${item.id}`}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
-                    isActive
-                      ? 'bg-[#1c1f30] text-[#E8E9F0]'
-                      : 'text-[#7B7F96] hover:text-[#E8E9F0] hover:bg-[#1A1D27]/50'
-                  }`}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 9,
+                    padding: '8px 10px',
+                    borderRadius: 7,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    fontFamily: 'inherit',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: `background-color var(--duration-fast) var(--ease-out-quart), color var(--duration-fast) var(--ease-out-quart)`,
+                    textAlign: 'left',
+                    // Active: tinted background + accent text + left bar
+                    backgroundColor: isActive ? 'var(--accent-faint)' : 'transparent',
+                    color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                    // Left accent bar via box-shadow (no extra DOM)
+                    boxShadow: isActive ? 'inset 2px 0 0 var(--accent)' : 'none',
+                  }}
                 >
-                  <span className={isActive ? 'text-[#6C63FF]' : 'text-[#7B7F96]'}>
-                    {item.icon}
+                  <span style={{ opacity: isActive ? 1 : 0.7, flexShrink: 0 }}>{item.icon}</span>
+                  <span style={{ color: isActive ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                    {item.label}
                   </span>
-                  <span>{item.label}</span>
                 </button>
               )
             })}
           </nav>
         </div>
 
-        {/* Bottom Sidebar Version Tag */}
-        <div className="px-3 py-2 border-t border-[#1e2235]/50">
-          <span className="font-mono-data text-[10px] text-[#3d4060]">
-            v1.0 · SQLite
+        {/* Bottom version tag */}
+        <div style={{ padding: '10px', borderTop: '1px solid var(--border)', marginTop: 8 }}>
+          <span className="font-mono-data" style={{ fontSize: 10, color: 'var(--text-ghost)' }}>
+            v1.0 · SQLite · Gemini
           </span>
         </div>
       </aside>
 
       {/* ── Main Area ── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#0F1117]">
-        {/* Top Header with Pill Tabs */}
-        <header className="h-14 border-b border-[#1e2235] px-6 flex items-center justify-between sticky top-0 bg-[#0F1117] z-10">
-          <div className="bg-[#13151f] p-1 rounded-md border border-[#1e2235] flex items-center gap-1">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, backgroundColor: 'var(--bg-base)' }}>
+
+        {/* Top Header */}
+        <header
+          style={{
+            height: 52,
+            borderBottom: '1px solid var(--border)',
+            padding: '0 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'sticky',
+            top: 0,
+            backgroundColor: 'var(--bg-base)',
+            zIndex: 10,
+          }}
+        >
+          {/* Pill tab bar */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-sidebar)',
+              padding: '3px',
+              borderRadius: 8,
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
             {NAV_ITEMS.map(tab => {
               const isActive = activeTab === tab.id
               return (
@@ -92,11 +155,19 @@ export default function App() {
                   key={tab.id}
                   id={`tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3.5 py-1.5 rounded-md text-[12px] font-medium transition-all ${
-                    isActive
-                      ? 'bg-[#1A1D27] text-[#E8E9F0]'
-                      : 'text-[#7B7F96] hover:text-[#E8E9F0]'
-                  }`}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    fontFamily: 'inherit',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: `background-color var(--duration-fast) var(--ease-out-quart), color var(--duration-fast) var(--ease-out-quart), box-shadow var(--duration-fast) var(--ease-out-quart)`,
+                    backgroundColor: isActive ? 'var(--bg-raised)' : 'transparent',
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                    boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+                  }}
                 >
                   {tab.label}
                 </button>
@@ -104,14 +175,40 @@ export default function App() {
             })}
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-[#7B7F96]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#5DCAA5]" />
-            <span>API Online</span>
+          {/* API status chip with pulse ring */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            {/* Pulse ring indicator */}
+            <span style={{ position: 'relative', display: 'flex', width: 8, height: 8 }}>
+              <span
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '50%',
+                  backgroundColor: '#52C9A0',
+                  opacity: 0.5,
+                  animation: 'pulsePing 2s ease-in-out infinite',
+                }}
+              />
+              <span
+                style={{
+                  position: 'relative',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: '#52C9A0',
+                }}
+              />
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>API Online</span>
           </div>
         </header>
 
-        {/* Content Area */}
-        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+        {/* Content Area — key forces remount → triggers entry animation */}
+        <main
+          key={activeTab}
+          className="animate-fade-slide-up"
+          style={{ flex: 1, padding: 24, maxWidth: 1280, width: '100%', margin: '0 auto' }}
+        >
           {activeTab === 'submit'    && <TicketForm />}
           {activeTab === 'tickets'   && <TicketList />}
           {activeTab === 'analytics' && <Analytics />}
